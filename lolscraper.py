@@ -52,7 +52,6 @@ def extract_champion_name(url):
 
 
 if __name__ == "__main__":
-    
     champion_name = "draven"
     path = "https://lolalytics.com/lol/" + champion_name + "/build/"
     driver.get(path)
@@ -112,42 +111,40 @@ if __name__ == "__main__":
     last_name_is_repeated = False; #after moving to the right 10 times if the last name matches the current final name it means no more champs are to be seen
     #keep running the champ reading until 
     while(not last_name_is_repeated):
-        for _ in range(10):
-            actions.send_keys(Keys.ARROW_RIGHT)
+        actions.send_keys(Keys.ARROW_RIGHT * 10)
         actions.perform()
 
 
         local_last_champ = "";
         for index in range(300):
             column_counter = str(index+1)
-            champ_image_a_element_xpath = TOP_CHAMPION_ROW + "/div[2]/div/div[" + column_counter + "]/a"
+            partner_image_a_element_xpath = TOP_CHAMPION_ROW + "/div[2]/div/div[" + column_counter + "]/a"
+            partner_win_rate_xpath =  TOP_CHAMPION_ROW + "/div[2]/div/div[" + column_counter + "]/div[1]/span"
+            partner_pick_rate_xpath =  TOP_CHAMPION_ROW + "/div[2]/div/div[" + column_counter + "]/div[4]"
+            partner_number_of_games_xpath =  TOP_CHAMPION_ROW + "/div[2]/div/div[" + column_counter + "]/div[5]"
             try:
                 partner_image_element = driver.find_element(By.XPATH, partner_image_a_element_xpath)
                 partner_href = partner_image_element.get_attribute('href');
                 partner_champ_name = extract_champion_name(partner_href)    
 
-                partner_win_rate = driver.find_element(By.XPATH, partner_win_rate_xpath).text
-                partner_pick_rate = partner_pick_rate_div = driver.find_element(By.XPATH, partner_pick_rate_xpath).text
-                partner_number_of_games = driver.find_element(By.XPATH, partner_number_of_games_xpath).text
-
-                print(partner_champ_name)
-                #found_champs.append(partner_champ_name)
-
-                #add champs to the visited 
-                stats = ChampionSynergyStats(
-                    champion_name=champion_name,
-                    champion_role=champion_role,
-                    partner_champion_name=partner_champ_name,
-                    partner_role=partner_champion_role,
-                    partner_relation=partner_relation,
-                    win_rate=partner_win_rate,
-                    pick_rate=partner_pick_rate,
-                    number_of_games=partner_number_of_games)
+                print(partner_champ_name + "was found in column " + column_counter)
 
                 champ_already_in_found_champs = any(champ.partner_champion_name == partner_champ_name for champ in found_champs)
                 if not champ_already_in_found_champs:      
-                    print(partner_champ_name)
+                    partner_win_rate = driver.find_element(By.XPATH, partner_win_rate_xpath).text
+                    partner_pick_rate = partner_pick_rate_div = driver.find_element(By.XPATH, partner_pick_rate_xpath).text
+                    partner_number_of_games = driver.find_element(By.XPATH, partner_number_of_games_xpath).text
+                    stats = ChampionSynergyStats(
+                        champion_name=champion_name,
+                        champion_role=champion_role,
+                        partner_champion_name=partner_champ_name,
+                        partner_role=partner_champion_role,
+                        partner_relation=partner_relation,
+                        win_rate=partner_win_rate,
+                        pick_rate=partner_pick_rate,
+                        number_of_games=partner_number_of_games)
                     #add champs to the visited 
+                    print("adding partner champ to found champs: " + partner_champ_name)
                     found_champs.append(stats)
                     #extract champ details
                 local_last_champ = partner_champ_name;
