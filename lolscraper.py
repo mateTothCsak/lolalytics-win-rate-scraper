@@ -15,8 +15,6 @@ driver = webdriver.Chrome(service=service)
 actions = ActionChains(driver)
 
 TOP_CHAMPION_ROW = "/html/body/main/div[6]/div[1]/div[2]"
-
-
     
 def click_top_champion_row(): 
     div_element = driver.find_element(By.XPATH, TOP_CHAMPION_ROW)
@@ -49,96 +47,47 @@ def extract_champion_name(url):
             return parts[index + 1]
     return None  # Return None if 'vs' is not found or no name after 'vs'
 
+def build_xpaths(column_counter):
+    base_xpath = TOP_CHAMPION_ROW + "/div[2]/div/div[" + str(column_counter) + "]"
+    return {
+        'image': base_xpath + "/a",
+        'win_rate': base_xpath + "/div[1]/span",
+        'pick_rate': base_xpath + "/div[4]",
+        'number_of_games': base_xpath + "/div[5]"
+    }
 
+def get_scraped_synergy_stats(column_counter):
+    xpaths = build_xpaths(column_counter)
+    try:
+        partner_image_element = driver.find_element(By.XPATH, xpaths['image'])
+        partner_href = partner_image_element.get_attribute('href')
+        partner_champ_name = extract_champion_name(partner_href)
+        partner_win_rate = driver.find_element(By.XPATH, xpaths['win_rate']).text
+        partner_pick_rate = driver.find_element(By.XPATH, xpaths['pick_rate']).text
+        partner_number_of_games = driver.find_element(By.XPATH, xpaths['number_of_games']).text
+        return partner_champ_name, partner_win_rate, partner_pick_rate, partner_number_of_games
+    except NoSuchElementException:
+        raise
 
-if __name__ == "__main__":
-    champion_name = "draven"
-    path = "https://lolalytics.com/lol/" + champion_name + "/build/"
-    driver.get(path)
-
-    click_accept_privacy_policy_button()
-    click_top_champion_row() #to bring the attention there and the champs should start loading
-    click_first_top_champion_column() #we click on the first champion so we'll be able to go to the right by pressing the right key
-
-    #and now here below the ugly magic happens which is still not complete so don't judge dem creators
+def process_champion(champion_name, champion_role, partner_role, partner_relation):
     found_champs = [] #for keeping track which champs have been visited for scrolling
-    champion_role = "bottom"
-    partner_champion_role = "top"
-    partner_relation = "enemy"
-
     global_last_champ="";
-    #first run the champ reading once
-    for index in range(300):
-        column_counter = str(index+1)
-        #TODO remove partner naming from here, unncecessary
-        partner_image_a_element_xpath = TOP_CHAMPION_ROW + "/div[2]/div/div[" + column_counter + "]/a"
-        partner_win_rate_xpath =  TOP_CHAMPION_ROW + "/div[2]/div/div[" + column_counter + "]/div[1]/span"
-        partner_pick_rate_xpath =  TOP_CHAMPION_ROW + "/div[2]/div/div[" + column_counter + "]/div[4]"
-        partner_number_of_games_xpath =  TOP_CHAMPION_ROW + "/div[2]/div/div[" + column_counter + "]/div[5]"
-
-        try:
-            partner_image_element = driver.find_element(By.XPATH, partner_image_a_element_xpath)
-            partner_href = partner_image_element.get_attribute('href');
-            partner_champ_name = extract_champion_name(partner_href)    
-
-            #can be shortened to one line, calling .text directly
-            partner_win_rate = driver.find_element(By.XPATH, partner_win_rate_xpath).text
-            partner_pick_rate = driver.find_element(By.XPATH, partner_pick_rate_xpath).text
-            partner_number_of_games = driver.find_element(By.XPATH, partner_number_of_games_xpath).text
-
-            print(partner_champ_name)
-            #found_champs.append(partner_champ_name)
-
-            #add champs to the visited 
-            stats = ChampionSynergyStats(
-                champion_name=champion_name,
-                champion_role=champion_role,
-                partner_champion_name=partner_champ_name,
-                partner_role=partner_champion_role,
-                partner_relation=partner_relation,
-                win_rate=partner_win_rate,
-                pick_rate=partner_pick_rate,
-                number_of_games=partner_number_of_games)
-
-            found_champs.append(stats)
-
-            #found_champs.append({"name": champion_name})
-            global_last_champ = partner_champ_name;
-        except NoSuchElementException:
-            print("last found global champ was " + global_last_champ)
-            break
-        
     last_name_is_repeated = False; #after moving to the right 10 times if the last name matches the current final name it means no more champs are to be seen
-    #keep running the champ reading until 
+    
     while(not last_name_is_repeated):
-        actions.send_keys(Keys.ARROW_RIGHT * 10)
-        actions.perform()
-
-
         local_last_champ = "";
-        for index in range(300):
+        for index in range(300): #TODO nice would be to replace this random 300 number with a proper solution
             column_counter = str(index+1)
-            partner_image_a_element_xpath = TOP_CHAMPION_ROW + "/div[2]/div/div[" + column_counter + "]/a"
-            partner_win_rate_xpath =  TOP_CHAMPION_ROW + "/div[2]/div/div[" + column_counter + "]/div[1]/span"
-            partner_pick_rate_xpath =  TOP_CHAMPION_ROW + "/div[2]/div/div[" + column_counter + "]/div[4]"
-            partner_number_of_games_xpath =  TOP_CHAMPION_ROW + "/div[2]/div/div[" + column_counter + "]/div[5]"
             try:
-                partner_image_element = driver.find_element(By.XPATH, partner_image_a_element_xpath)
-                partner_href = partner_image_element.get_attribute('href');
-                partner_champ_name = extract_champion_name(partner_href)    
-
-                print(partner_champ_name + "was found in column " + column_counter)
-
+                partner_champ_name, partner_win_rate, partner_pick_rate, partner_number_of_games = get_scraped_synergy_stats(column_counter)
+                print(partner_champ_name)
                 champ_already_in_found_champs = any(champ.partner_champion_name == partner_champ_name for champ in found_champs)
-                if not champ_already_in_found_champs:      
-                    partner_win_rate = driver.find_element(By.XPATH, partner_win_rate_xpath).text
-                    partner_pick_rate = partner_pick_rate_div = driver.find_element(By.XPATH, partner_pick_rate_xpath).text
-                    partner_number_of_games = driver.find_element(By.XPATH, partner_number_of_games_xpath).text
+                if not champ_already_in_found_champs:
                     stats = ChampionSynergyStats(
                         champion_name=champion_name,
                         champion_role=champion_role,
                         partner_champion_name=partner_champ_name,
-                        partner_role=partner_champion_role,
+                        partner_role=partner_role,
                         partner_relation=partner_relation,
                         win_rate=partner_win_rate,
                         pick_rate=partner_pick_rate,
@@ -156,6 +105,24 @@ if __name__ == "__main__":
             break
         else:
             global_last_champ = local_last_champ
-            print("global last champ " + global_last_champ)
+            print("moving to the right, global last champ " + global_last_champ)
+            actions.send_keys(Keys.ARROW_RIGHT * 10) # TODO add WebdriverWait on top to avoid potential race conditions
+            actions.perform()
+    return found_champs
+    
 
-    print(found_champs)
+if __name__ == "__main__":
+    champion_name = "draven"
+    champion_role = "bottom"
+    partner_role = "top"
+    partner_relation = "enemy"
+    path = "https://lolalytics.com/lol/" + champion_name + "/build/"
+    driver.get(path)
+
+    click_accept_privacy_policy_button()
+    click_top_champion_row() #to bring the attention there and the champs should start loading
+    click_first_top_champion_column() #we click on the first champion so we'll be able to go to the right by pressing the right key
+
+    result = process_champion(champion_name, champion_role, partner_role, partner_relation)
+
+    print(result)
