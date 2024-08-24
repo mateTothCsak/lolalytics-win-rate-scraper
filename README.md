@@ -22,18 +22,16 @@ Since this is a one-person project I don't bother too much with branching etc, a
 Example model for an outcome of a champion comparison:
 ```
 {
-    "champion_name": "Aatrox",
-    "champion_role": "Top",
-    "partner_champion_name": "Yuumi",
-    "partner_role": "Support",
-    "win_rate_with": 0.52,
-    "pick_rate_with": 0.03,
-    "games_with": 505,
-    "win_rate_against": 0.47,
-    "pick_rate_against": 0.02,
-    "games_against": 403
+    "champion_name": "aatrox",
+    "champion_role": "top",
+    "partner_champion_name": "yuumi",
+    "partner_role": "support",
+    "partner_relation": "enemy",
+    "win_rate": 0.52,
+    "pick_rate": 0.03,
+    "number_of_games": 505
 }
 ```
-where the fields ending "with" represent when the two champions played on the same team, and "against" the cases when they were opponents.
 
-In this example, in games where Aatrox Top played with Yuumi Support in the same team they had a win rate of 52%, when Aatrox Top was in one team and Yuumi Support was on the oter Aatrox had only a win rate of 47%.
+
+In this example, in games where Aatrox Top played against Yuumi Support in the enemy team they had a win rate of 52%, there were a total of 505 games, and Yuumi support was picked in 3% of games against Aatrox. (based on lolalytics data)
