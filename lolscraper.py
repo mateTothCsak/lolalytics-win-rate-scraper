@@ -4,22 +4,24 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.keys import Keys
 from selenium.common.exceptions import NoSuchElementException;
-
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from champion_synergy_stats import ChampionSynergyStats
 
-service = Service(r'') # will be moved to config.ini later
+from champion_synergy_stats import ChampionSynergyStats
+from configs import CHROMEDRIVER_PATH
+
+service = Service(CHROMEDRIVER_PATH)
 driver = webdriver.Chrome(service=service)
 actions = ActionChains(driver)
 
-TOP_CHAMPION_ROW = "/html/body/main/div[6]/div[1]/div[2]"
-    
-def click_top_champion_row(): 
-    div_element = driver.find_element(By.XPATH, TOP_CHAMPION_ROW)
-    actions.click(on_element=div_element)
-    actions.perform()
+CHAMPION_ROLE_ROWS_XPATH = {
+    "top": "/html/body/main/div[6]/div[1]/div[2]",
+    "jungle": "/html/body/main/div[6]/div[1]/div[3]",
+    "mid": "/html/body/main/div[6]/div[1]/div[4]",
+    "bottom": "/html/body/main/div[6]/div[1]/div[5]",
+    "support": "/html/body/main/div[6]/div[1]/div[6]",
+}
 
 def click_accept_privacy_policy_button():
     try:
@@ -30,25 +32,30 @@ def click_accept_privacy_policy_button():
     finally:
         print("Privacy policy button check complete")
 
-def click_first_top_champion_column(): # can be extended by accepting the row as parameter
-    first_top_champion_column = TOP_CHAMPION_ROW + "/div[2]/div/div[1]"
+
+def click_champion_row(role): 
+    div_element = driver.find_element(By.XPATH, CHAMPION_ROLE_ROWS_XPATH.get(role))
+    actions.click(on_element=div_element)
+    actions.perform()
+
+
+def click_first_champion_column(role):
+    first_top_champion_column = CHAMPION_ROLE_ROWS_XPATH.get(role) + "/div[2]/div/div[1]"
     WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, first_top_champion_column)))
     actions.click(on_element=driver.find_element(By.XPATH, first_top_champion_column))
     actions.perform()
 
-
+# assuming the url path is in this format: /lol/draven/vs/senna/build/?vslane=support
+# we grab the name from the part after 'vs'
 def extract_champion_name(url):
-    # Splitting by '/' breaks the URL into parts between each '/'
     parts = url.split('/')
-    # Assuming the champion's name is always after 'vs' in URL
     for index, part in enumerate(parts):
         if part == 'vs':
-            # Return the next part after 'vs' which should be the champion's name
             return parts[index + 1]
-    return None  # Return None if 'vs' is not found or no name after 'vs'
+    return None
 
-def build_xpaths(column_counter):
-    base_xpath = TOP_CHAMPION_ROW + "/div[2]/div/div[" + str(column_counter) + "]"
+def build_xpaths(column_counter, role):
+    base_xpath = CHAMPION_ROLE_ROWS_XPATH.get(role) + "/div[2]/div/div[" + str(column_counter) + "]"
     return {
         'image': base_xpath + "/a",
         'win_rate': base_xpath + "/div[1]/span",
@@ -56,8 +63,8 @@ def build_xpaths(column_counter):
         'number_of_games': base_xpath + "/div[5]"
     }
 
-def get_scraped_synergy_stats(column_counter):
-    xpaths = build_xpaths(column_counter)
+def get_scraped_synergy_stats(column_counter, role):
+    xpaths = build_xpaths(column_counter, role)
     try:
         partner_image_element = driver.find_element(By.XPATH, xpaths['image'])
         partner_href = partner_image_element.get_attribute('href')
@@ -69,7 +76,7 @@ def get_scraped_synergy_stats(column_counter):
     except NoSuchElementException:
         raise
 
-def process_champion(champion_name, champion_role, partner_role, partner_relation):
+def collect_champ_stats(champion_name, champion_role, partner_role, partner_relation):
     found_champs = [] #for keeping track which champs have been visited for scrolling
     global_last_champ="";
     last_name_is_repeated = False; #after moving to the right 10 times if the last name matches the current final name it means no more champs are to be seen
@@ -79,7 +86,7 @@ def process_champion(champion_name, champion_role, partner_role, partner_relatio
         for index in range(300): #TODO nice would be to replace this random 300 number with a proper solution
             column_counter = str(index+1)
             try:
-                partner_champ_name, partner_win_rate, partner_pick_rate, partner_number_of_games = get_scraped_synergy_stats(column_counter)
+                partner_champ_name, partner_win_rate, partner_pick_rate, partner_number_of_games = get_scraped_synergy_stats(column_counter, partner_role)
                 print(partner_champ_name)
                 champ_already_in_found_champs = any(champ.partner_champion_name == partner_champ_name for champ in found_champs)
                 if not champ_already_in_found_champs:
@@ -109,20 +116,30 @@ def process_champion(champion_name, champion_role, partner_role, partner_relatio
             actions.send_keys(Keys.ARROW_RIGHT * 10) # TODO add WebdriverWait on top to avoid potential race conditions
             actions.perform()
     return found_champs
+
+def process_champion_for_position(champion_name, champion_role, partner_role, partner_relation):
+        click_champion_row(partner_role) #to bring the attention there and the champs should start loading
+        click_first_champion_column(partner_role) #we click on the first champion so we'll be able to go to the right by pressing the right key
+        return collect_champ_stats(champion_name, champion_role, partner_role, partner_relation)
+
+def process_champion(champion_name, champion_role, partner_relation):
+    roles = ["top", "jungle", "mid", "bottom", "support"]
+    champion_stats = []
+    for role in roles:
+        champion_stats += process_champion_for_position(champion_name, champion_role, role, partner_relation)
+    return champion_stats
+
     
 
 if __name__ == "__main__":
     champion_name = "draven"
     champion_role = "bottom"
-    partner_role = "top"
     partner_relation = "enemy"
     path = "https://lolalytics.com/lol/" + champion_name + "/build/"
     driver.get(path)
 
     click_accept_privacy_policy_button()
-    click_top_champion_row() #to bring the attention there and the champs should start loading
-    click_first_top_champion_column() #we click on the first champion so we'll be able to go to the right by pressing the right key
-
-    result = process_champion(champion_name, champion_role, partner_role, partner_relation)
+    result = process_champion(champion_name, champion_role, partner_relation)
 
     print(result)
+    print(len(result))

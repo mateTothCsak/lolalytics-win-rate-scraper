@@ -35,3 +35,7 @@ Example model for an outcome of a champion comparison:
 
 
 In this example, in games where Aatrox Top played against Yuumi Support in the enemy team they had a win rate of 52%, there were a total of 505 games, and Yuumi support was picked in 3% of games against Aatrox. (based on lolalytics data)
+
+
+## STATUS
+Currently the scraper is being implemented, there is no working version yet available. If you are interested in this project please visit back in a few days
