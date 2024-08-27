@@ -18,7 +18,7 @@ actions = ActionChains(driver)
 CHAMPION_ROLE_ROWS_XPATH = {
     "top": "/html/body/main/div[6]/div[1]/div[2]",
     "jungle": "/html/body/main/div[6]/div[1]/div[3]",
-    "mid": "/html/body/main/div[6]/div[1]/div[4]",
+    "middle": "/html/body/main/div[6]/div[1]/div[4]",
     "bottom": "/html/body/main/div[6]/div[1]/div[5]",
     "support": "/html/body/main/div[6]/div[1]/div[6]",
 }
@@ -123,7 +123,7 @@ def process_champion_for_position(champion_name, champion_role, partner_role, pa
         return collect_champ_stats(champion_name, champion_role, partner_role, partner_relation)
 
 def process_champion(champion_name, champion_role, partner_relation):
-    roles = ["top", "jungle", "mid", "bottom", "support"]
+    roles = ["top", "jungle", "middle", "bottom", "support"]
     champion_stats = []
     for role in roles:
         champion_stats += process_champion_for_position(champion_name, champion_role, role, partner_relation)
